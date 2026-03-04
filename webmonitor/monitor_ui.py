@@ -470,7 +470,7 @@ HTML_TEMPLATE = """
             // Remove file extension (e.g., .gguf)
             const name = fullName.replace(/\.[^/.]+$/, "");
             const url = `host.docker.internal:${port || '?'}`;
-            const textToCopy = `${name} ${url}`;
+            const textToCopy = `${name}    ${url}`;
             
             // Clipboard copy
             const el = document.createElement('textarea');
