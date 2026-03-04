@@ -1,35 +1,26 @@
-"""
-Monitor Logic Module
-Handles system process monitoring, model filesystem scanning, and direct service controls.
-This module is decoupled from the web framework for better portability.
-"""
-import psutil
-import requests
-import re
 import os
-import subprocess
+import psutil
+import re
 import time
-
-def format_uptime(seconds):
-    """Converts a duration in seconds to a human-readable string (e.g., 2h 30m)."""
-    if seconds < 60: return f"{int(seconds)}s"
-    m, s = divmod(seconds, 60)
-    if m < 60: return f"{int(m)}m {int(s)}s"
-    h, m = divmod(m, 60)
-    return f"{int(h)}h {int(m)}m"
+import subprocess
 
 def is_ollama_service_running():
+    # Helper to check if ollama process is active
     for proc in psutil.process_iter(['name']):
         try:
-            if proc.info['name'] and ('ollama.exe' in proc.info['name'].lower() or 'ollama app.exe' in proc.info['name'].lower()):
+            name = proc.info.get('name')
+            if name and ('ollama.exe' in name.lower() or 'ollama app' in name.lower()):
                 return True
         except: pass
     return False
 
-def start_ollama_service():
+def start_ollama_service(config):
     # Launches Ollama serve in the background
+    install_dir = config.get("paths", {}).get("ollama_dir", "")
+    ollama_bin = os.path.join(install_dir, "ollama.exe") if install_dir else "ollama"
+    
     DETACHED_PROCESS = 0x00000008
-    subprocess.Popen(["ollama", "serve"], creationflags=DETACHED_PROCESS)
+    subprocess.Popen([ollama_bin, "serve"], creationflags=DETACHED_PROCESS)
     return True
 
 def get_llama_models(config):
@@ -39,6 +30,10 @@ def get_llama_models(config):
     if os.path.isdir(model_dir):
         available_files = [f for f in os.listdir(model_dir) if f.lower().endswith('.gguf')]
     
+    print(f"DEBUG: model_dir = {model_dir}")
+    print(f"DEBUG: available_files = {available_files}")
+    print(f"DEBUG: config services found = {list(config.get('services', {}).keys())}")
+
     # 2. Get running llama-server processes
     running_instances = []
     for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'memory_info', 'create_time']):
@@ -69,18 +64,29 @@ def get_llama_models(config):
         service_type = None
         port = None
         caps = []
-        l_fname = fname.lower()
+        l_fname = fname.lower().strip()
         
         for s_name, s_cfg in config.get("services", {}).items():
-            if s_cfg.get("model_file", "").lower() == l_fname:
+            if not s_cfg: continue
+            cfg_file = s_cfg.get("model_file", "").strip().lower()
+            print(f"DEBUG: Comparing '{l_fname}' with config file '{cfg_file}' (Source service: {s_name})")
+            if cfg_file == l_fname:
                 service_type = s_name
                 port = s_cfg.get("port")
-                caps.append(s_name.capitalize())
+                print(f"  -> SUCCESS: Match found for {s_name}")
+                # Use explicit capabilities list or fallback to service name
+                if "capabilities" in s_cfg:
+                    caps.extend(s_cfg["capabilities"])
+                else:
+                    caps.append(s_name.capitalize())
         
         if not caps:
             if "rerank" in l_fname: caps.append("Rerank")
             elif "embed" in l_fname or "m3" in l_fname: caps.append("Embedding")
             else: caps.append("Chat")
+        
+        # Unique capabilities
+        caps = list(dict.fromkeys(caps))
 
         full_path = os.path.join(model_dir, fname)
         size_mb = 0
@@ -114,97 +120,107 @@ def get_llama_models(config):
             
     return sorted(merged, key=lambda x: (not x['running'], x['name']))
 
+def format_uptime(seconds):
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    if hours > 0:
+        return f"{hours}h {minutes}m"
+    return f"{minutes}m"
+
 def get_ollama_status(api_url):
+    import requests
     try:
-        r_ps = requests.get(f'{api_url}/api/ps', timeout=2)
-        r_ps.raise_for_status()
-        active_dict = {
-            m.get('name'): {
-                "total_mb": m.get('size', 0) / (1024 * 1024),
-                "vram_mb": m.get('size_vram', 0) / (1024 * 1024)
-            } for m in r_ps.json().get('models', [])
-        }
-            
-        r_tags = requests.get(f'{api_url}/api/tags', timeout=2)
-        r_tags.raise_for_status()
-        
-        merged = []
-        for m in r_tags.json().get('models', []):
-            name = m.get('name')
-            l_name = name.lower()
-            is_active = name in active_dict
-            
-            caps = []
-            if "embed" in l_name or "m3" in l_name: caps.append("Embedding")
-            else: caps.append("Chat")
+        # Check active models
+        res_ps = requests.get(f"{api_url}/api/ps", timeout=2)
+        running_names = []
+        running_data = {}
+        if res_ps.ok:
+            for m in res_ps.json().get("models", []):
+                name = m.get("name")
+                running_names.append(name)
+                running_data[name] = {
+                    "vram_mb": round(m.get("size_vram", 0) / (1024*1024), 2),
+                    "total_mb": round(m.get("size", 0) / (1024*1024), 2)
+                }
 
-            merged.append({
-                "name": name,
-                "disk_size_mb": round(m.get('size', 0) / (1024 * 1024), 2),
-                "running": is_active,
-                "total_mb": round(active_dict[name]['total_mb'], 2) if is_active else 0,
-                "vram_mb": round(active_dict[name]['vram_mb'], 2) if is_active else 0,
-                "port": 11434,
-                "caps": caps
-            })
-        return sorted(merged, key=lambda x: (not x['running'], x['name'])), None, is_ollama_service_running()
+        # Check all models
+        res_tags = requests.get(f"{api_url}/api/tags", timeout=2)
+        all_models = []
+        if res_tags.ok:
+            for m in res_tags.json().get("models", []):
+                name = m.get("name")
+                is_running = name in running_names
+                all_models.append({
+                    "name": name,
+                    "running": is_running,
+                    "vram_mb": running_data.get(name, {}).get("vram_mb", 0) if is_running else 0,
+                    "total_mb": running_data.get(name, {}).get("total_mb", 0) if is_running else 0,
+                    "disk_size_mb": round(m.get("size", 0) / (1024*1024), 2),
+                    "caps": ["Chat"] # Ollama models are typically chat
+                })
+        
+        is_live = is_ollama_service_running()
+        return all_models, None, is_live
     except Exception as e:
-        return [], f"Cannot connect to Ollama: {str(e)}", is_ollama_service_running()
-
-def run_llama_start(config, target):
-    service_cfg = config.get("services", {}).get(target)
-    if not service_cfg:
-        raise ValueError(f"Config for {target} not found")
-        
-    model_dir = config.get("paths", {}).get("model_dir", "")
-    llama_exe_cfg = config.get("paths", {}).get("llama_server", "llama-server.exe")
-    
-    if os.path.isabs(llama_exe_cfg) and os.path.exists(llama_exe_cfg):
-        llama_exe = llama_exe_cfg
-    else:
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        candidate = os.path.join(project_root, "llamacpp", os.path.basename(llama_exe_cfg))
-        if os.path.exists(candidate):
-            llama_exe = candidate
-        else:
-            llama_exe = llama_exe_cfg
-
-    model_path = os.path.join(model_dir, service_cfg["model_file"])
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Model file not found: {model_path}")
-    
-    cmd = [
-        llama_exe, 
-        "-m", model_path,
-        "--host", service_cfg["host"],
-        "--port", str(service_cfg["port"]),
-        "-t", str(service_cfg["threads"])
-    ] + service_cfg.get("extra_args", [])
-    
-    DETACHED_PROCESS = 0x00000008
-    subprocess.Popen(cmd, creationflags=DETACHED_PROCESS, cwd=os.path.dirname(llama_exe) if os.path.isabs(llama_exe) else None)
-    return True
+        return [], str(e), is_ollama_service_running()
 
 def run_sys_control(config, target):
-    rag_dir = config.get("docker", {}).get("ragflow_dir")
-    nginx_dir = config.get("docker", {}).get("nginx_pm_dir")
+    import os
+    import subprocess
     
-    if not rag_dir or not nginx_dir:
-        raise ValueError("Docker paths not configured in config.json")
-        
     if target == 'rag_start':
-        subprocess.run(["docker-compose", "down"], cwd=rag_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(["docker-compose", "down"], cwd=nginx_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        
-        subprocess.run(["docker-compose", "up", "-d"], cwd=nginx_dir, check=True)
-        subprocess.run(["docker-compose", "up", "-d"], cwd=rag_dir, check=True)
-        subprocess.run(["docker-compose", "up", "-d"], cwd=nginx_dir, check=True)
-        return "Started"
-        
-    elif target == 'rag_stop':
-        subprocess.run(['taskkill', '/F', '/IM', 'llama-server.exe'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(["docker-compose", "down"], cwd=rag_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(["docker-compose", "down"], cwd=nginx_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return "Stopped"
+        docker_dir = config.get("docker", {}).get("ragflow_dir", "")
+        if not os.path.isdir(docker_dir): raise Exception(f"Invalid RAGFlow directory: {docker_dir}")
+        subprocess.Popen(["docker-compose", "up", "-d"], cwd=docker_dir, shell=True)
+        return "RAGFlow clusters starting..."
     
-    return "Unknown action"
+    if target == 'rag_stop':
+        docker_dir = config.get("docker", {}).get("ragflow_dir", "")
+        if not os.path.isdir(docker_dir): raise Exception(f"Invalid RAGFlow directory: {docker_dir}")
+        subprocess.Popen(["docker-compose", "stop"], cwd=docker_dir, shell=True)
+        return "RAGFlow clusters stopping..."
+
+    if target == 'npm_start':
+        npm_dir = config.get("docker", {}).get("nginx_pm_dir", "")
+        if not os.path.isdir(npm_dir): raise Exception(f"Invalid NginxPM directory: {npm_dir}")
+        subprocess.Popen(["docker-compose", "up", "-d"], cwd=npm_dir, shell=True)
+        return "Nginx Proxy Manager starting..."
+        
+    if target == 'npm_stop':
+        npm_dir = config.get("docker", {}).get("nginx_pm_dir", "")
+        if not os.path.isdir(npm_dir): raise Exception(f"Invalid NginxPM directory: {npm_dir}")
+        subprocess.Popen(["docker-compose", "stop"], cwd=npm_dir, shell=True)
+        return "Nginx Proxy Manager stopping..."
+
+    return "Unknown command"
+
+def run_llama_start(config, service_id):
+    import subprocess
+    import os
+    
+    s_cfg = config.get("services", {}).get(service_id)
+    if not s_cfg: raise Exception(f"Service configuration not found: {service_id}")
+    
+    model_dir = config.get("paths", {}).get("model_dir", "")
+    model_path = os.path.join(model_dir, s_cfg.get("model_file"))
+    llama_bin = config.get("paths", {}).get("llama_server", "llama-server.exe")
+    
+    cmd = [
+        llama_bin,
+        "-m", model_path,
+        "--host", s_cfg.get("host", "0.0.0.0"),
+        "--port", str(s_cfg.get("port", 8080)),
+        "-t", str(s_cfg.get("threads", 4))
+    ]
+    
+    # Add extra args if any
+    extra = s_cfg.get("extra_args", [])
+    cmd.extend(extra)
+    
+    # Use Windows Terminal (wt) to open in a new tab within the existing window
+    # -w 0 targets the first (current) Windows Terminal window
+    cmd_str = ' '.join([f'"{c}"' if ' ' in c else c for c in cmd])
+    full_cmd = f'wt -w 0 new-tab --title "{service_id}" cmd /k {cmd_str}'
+    print(f"Launching: {full_cmd}")
+    subprocess.Popen(full_cmd, shell=True)
+    return True

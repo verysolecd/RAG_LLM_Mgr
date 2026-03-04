@@ -19,8 +19,8 @@ if not exist "%PYTHON_CMD%" (
     exit
 )
 
-:: 后台运行 python 脚本
-start "" "%PYTHON_CMD%" "%~dp0webmonitor\web_monitor.py"
+:: 在 Windows Terminal 中新建标签页运行，以便后续大模型启动时也在同一个窗口显示
+wt new-tab --title "RAG Monitor" cmd /k "%PYTHON_CMD%" "%~dp0webmonitor\web_monitor.py"
 
 :: 延迟 2 秒等待服务启动
 ping 127.0.0.1 -n 3 >nul

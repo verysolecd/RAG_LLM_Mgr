@@ -1,5 +1,0 @@
-FROM qwen3.5:4b-q4_K_M
-# 将默认的32K上下文砍到4K，彻底根除 OOM！
-PARAMETER num_ctx 4096
-# 保留约20层给GPU，剩下用CPU，保护核显不至于崩溃
-PARAMETER num_gpu 20

@@ -1,0 +1,7 @@
+# 自动生成的下载配置 (来自 Web 监控界面)
+# 支持单模型对象，或模型列表
+
+dir: D:\oLLM\alone_models
+models:
+- model_id: Qwen/Qwen2.5-0.5B-Instruct-GGUF
+  file: qwen2.5-0.5b-instruct-q4_k_m.gguf

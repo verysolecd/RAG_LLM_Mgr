@@ -11,6 +11,7 @@
 
 ### ✨ Features
 - 🍎 **macOS Aesthetics**: Beautiful glassmorphism UI with dark mode support.
+- ⬇️ **GGUF Downloader**: Built-in ModelScope downloader with a dedicated sidebar tool, supporting YAML-based batch tasks.
 - 🦊 **LLaMA.cpp Integration**: Scan local `.gguf` models, monitor RAM/VRAM, and control Embedding/Rerank nodes.
 - 🦙 **Ollama Controller**: Manage core Ollama service status and individual model loading/unloading.
 - 🐳 **Docker Management**: One-click Start/Stop for RAGFlow clusters and Nginx Proxy Manager.
@@ -44,6 +45,7 @@
 
 ### ✨ 核心功能
 - 🍎 **macOS 审美**：极致的毛玻璃 (Glassmorphism) UI 效果，支持系统级深色模式。
+- ⬇️ **GGUF 下载器**：内置 ModelScope 模型下载工具，支持通过 YAML 配置进行可视化或批量下载。
 - 🦊 **LLaMA.cpp 集成**：自动扫描本地 `.gguf` 模型库，实时查看显存占用，一键启停 Embedding/Rerank 节点。
 - 🦙 **Ollama 控制器**：集成了 Ollama 核心服务状态监测与控制，支持单个模型的按需加载与卸载。
 - 🐳 **Docker 管理**：一键管理 RAGFlow 容器集群与 Nginx 代理服务。

@@ -1,0 +1,63 @@
+# RAG Manager 配置文件
+# 支持 # 注释，修改后需重启服务生效
+
+# 基础路径配置
+paths:
+  # GGUF 模型存放目录 (绝对路径)
+  model_dir: "D:\\oLLM\\alone_models"
+  # llama-server 执行文件名或绝对路径
+  llama_server: "llama-server.exe"
+  # Ollama 的安装目录 (包含 ollama.exe 的文件夹路径)
+  ollama_dir: "D:\\oLLM\\ollama"
+
+# Ollama 服务配置
+ollama:
+  api_url: "http://127.0.0.1:11434"
+
+# Docker 容器路径配置 (用于一键启停 RAGFlow 集群)
+docker:
+  ragflow_dir: "D:\\Dockers_data\\Docker_RAGFLOW\\ragflow\\docker"
+  nginx_pm_dir: "D:\\Dockers_data\\Docker_NginxPM"
+
+# 本地 LLaMA.cpp 服务实例配置
+# Key 为服务唯一标识名 (建议与模型名保持一致)
+services:
+
+  # 1. 聊天模型
+  Qwen3.5-0.8B-Q8_0:
+    model_file: "Qwen3.5-0.8B-Q8_0.gguf"
+    capabilities: ["Chat"]
+    host: "0.0.0.0"
+    port: 1001
+    threads: 8
+    extra_args: ["-c", "4096"]
+
+  Qwen2.5-0.5B-Instruct-GGUF:
+    model_file: "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+    capabilities: ["Chat"]
+    host: "0.0.0.0"
+    port: 1002
+    threads: 8
+    batch-size: 4096
+    extra_args: ["-c", "4096"]
+
+
+  # 2. Embedding 专用模型
+  bge-m3-Q8_0:
+    model_file: "bge-m3-Q8_0.gguf"
+    capabilities: ["Embedding"]
+    host: "0.0.0.0"
+    port: 8088
+    threads: 8
+    # -b: 逻辑批处理大小（提升吞吐量）；-ub: 物理批处理大小（单次最大 token 上限）
+    extra_args: ["--embedding", "-b", "2048", "-ub", "2048"]
+
+  # 3. 方案 A: 综合集成模型 (重排序 + 辅助向量)
+  bge-reranker-v2-m3-FP16:
+    model_file: "bge-reranker-v2-m3-FP16.gguf"
+    capabilities: ["Embedding", "Rerank"]
+    host: "0.0.0.0"
+    port: 8000
+    threads: 8
+    # 启用多种功能的启动参数
+    extra_args: ["--embedding", "--pooling", "rank", "--reranking"]

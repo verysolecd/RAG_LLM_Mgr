@@ -1,0 +1,32 @@
+# RAG Manager 配置文件示例
+# 请将其重命名为 config.yaml 并根据实际路径修改
+
+paths:
+  model_dir: "D:\\oLLM\\alone_models"
+  llama_server: "llama-server.exe"
+  ollama_dir: "D:\\oLLM\\ollama"
+
+docker:
+  ragflow_dir: "D:\\Dockers_data\\Docker_RAGFLOW\\ragflow\\docker"
+  nginx_pm_dir: "D:\\Dockers_data\\Docker_NginxPM"
+
+ollama:
+  api_url: "http://127.0.0.1:11434"
+
+services:
+  # 示例: 一个进程提供多种服务
+  multi_purpose:
+    model_file: "bge-m3-Q8_0.gguf"
+    capabilities: ["Embedding", "Rerank"]
+    host: "0.0.0.0"
+    port: 8088
+    threads: 8
+    extra_args: ["--embedding", "--reranking", "--pooling", "rank"]
+
+  simple_chat:
+    model_file: "qwen-chat.gguf"
+    capabilities: ["Chat"]
+    host: "0.0.0.0"
+    port: 1001
+    threads: 8
+    extra_args: ["-c", "2048"]

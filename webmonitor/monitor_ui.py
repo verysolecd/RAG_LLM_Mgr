@@ -262,6 +262,76 @@ HTML_TEMPLATE = """
             text-transform: uppercase;
         }
 
+        /* --- Download Panel (Full Page Mode) --- */
+        .download-view {
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 40px;
+        }
+        .download-card {
+            background: var(--sidebar-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 30px 40px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: var(--shadow-soft);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .dl-header {
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--apple-blue);
+            margin-bottom: 10px;
+        }
+        .dl-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+        .dl-input-group label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dim);
+        }
+        .dl-input {
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 15px;
+            background: rgba(255,255,255,0.6);
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .dl-input:focus { border-color: var(--apple-blue); background: #fff; box-shadow: 0 0 0 3px rgba(0,122,255,0.1); }
+        @media (prefers-color-scheme: dark) {
+            .dl-input { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); }
+            .dl-input:focus { background: rgba(0,0,0,0.5); }
+        }
+        .btn-download-large {
+            background: var(--apple-blue);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .btn-download-large:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
+
         .metric-text { font-family: "SF Mono", "Menlo", monospace; font-weight: 500; }
 
         .sidebar-toggle-fixed {
@@ -337,6 +407,9 @@ HTML_TEMPLATE = """
         <div class="sidebar-header">Engines</div>
         <div class="nav-item active" id="tab-llama" onclick="switchTab('llama')">🦊 LLaMA.cpp</div>
         <div class="nav-item" id="tab-ollama" onclick="switchTab('ollama')">🦙 Ollama</div>
+        
+        <div class="sidebar-header">Tools</div>
+        <div class="nav-item" id="tab-gguf" onclick="switchTab('gguf')">⬇️ Download Models</div>
     </div>
 
     <!-- Main Window Content -->
@@ -350,25 +423,56 @@ HTML_TEMPLATE = """
             <button class="refresh-btn" onclick="fetchData()">⟳ Refresh</button>
         </div>
 
-        <div class="content-scroll">
-            <div class="table-container">
-                <table id="main-table">
-                    <thead>
-                        <tr id="table-header">
-                            <th style="width:80px">Action</th>
-                            <th style="width:35%">Model Resource</th>
-                            <th>Capability</th>
-                            <th>Status</th>
-                            <th>System RAM</th>
-                            <th>GPU VRAM</th>
-                            <th id="runtime-header">Runtime / Size</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body">
-                        <!-- Injected via JavaScript -->
-                    </tbody>
-                </table>
+        <div class="content-scroll" id="main-scroll-area">
+            
+            <!-- Views Container -->
+            <div id="table-view" style="display: block;">
+                <div class="table-container">
+                    <table id="main-table">
+                        <thead>
+                            <tr id="table-header">
+                                <th style="width:80px">Action</th>
+                                <th style="width:35%">Model Resource</th>
+                                <th>Capability</th>
+                                <th>Status</th>
+                                <th>System RAM</th>
+                                <th>GPU VRAM</th>
+                                <th id="runtime-header">Runtime / Size</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Injected via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
+            <!-- GGUF Downloader View (Full Page) -->
+            <div id="gguf-view" class="download-view">
+                <div class="download-card">
+                    <div class="dl-header">⬇️ GGUF Model Downloader</div>
+                    <div style="text-align:center; margin-bottom:10px;">
+                        <a href="https://modelscope.cn/models?name=gguf&page=1&tabKey=task" target="_blank" 
+                           style="color:var(--apple-blue); font-size:13px; text-decoration:none; font-weight:500;">
+                           🔗 Browse GGUF Models on ModelScope
+                        </a>
+                    </div>
+                    <div class="dl-input-group">
+                        <label>Repository ID</label>
+                        <input type="text" id="dl-model-id" class="dl-input" placeholder="e.g. unsloth/Qwen3.5-0.8B-GGUF">
+                    </div>
+                    <div class="dl-input-group">
+                        <label>File Name</label>
+                        <input type="text" id="dl-file" class="dl-input" placeholder="e.g. Qwen3.5-0.8B-Q8_0.gguf">
+                    </div>
+                    <div class="dl-input-group">
+                        <label>Save Directory</label>
+                        <input type="text" id="dl-dir" class="dl-input" placeholder="D:\\oLLM\\alone_models" value="D:\\oLLM\\alone_models">
+                    </div>
+                    <button class="btn-download-large" onclick="actionDownloadGGUF()">🚀 Start Download Task</button>
+                </div>
+            </div>
+            
         </div>
 
         <!-- Footer / Status Bar -->
@@ -394,9 +498,34 @@ HTML_TEMPLATE = """
             currentTab = name;
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${name}`).classList.add('active');
-            document.getElementById('page-title').innerText = name === 'llama' ? 'LLaMA.cpp Instances' : 'Ollama Management';
-            document.getElementById('runtime-header').innerText = name === 'llama' ? 'Uptime' : 'Disk Size';
-            fetchData();
+
+            // View Toggling
+            const tableView = document.getElementById('table-view');
+            const ggufView = document.getElementById('gguf-view');
+            const refreshBtn = document.getElementById('refresh-btn');
+            
+            if (name === 'gguf') {
+                tableView.style.display = 'none';
+                ggufView.style.display = 'flex';
+                document.getElementById('page-title').innerText = 'GGUF Model Downloader';
+                document.getElementById('service-status-container').style.display = 'none';
+                document.getElementById('ollama-start-btn').style.display = 'none';
+                if(refreshBtn) refreshBtn.style.display = 'none';
+            } else {
+                ggufView.style.display = 'none';
+                tableView.style.display = 'block';
+                if(refreshBtn) refreshBtn.style.display = 'flex';
+                document.getElementById('page-title').innerText = name === 'llama' ? 'LLaMA.cpp Instances' : 'Ollama Management';
+                document.getElementById('runtime-header').innerText = name === 'llama' ? 'Uptime' : 'Disk Size';
+                fetchData();
+            }
+        }
+
+        function renderTags(caps) {
+            if (!caps || caps.length === 0) return '-';
+            return `<div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                ${caps.map(cap => `<span class="badge" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding: 2px 6px; font-size: 10px;">${cap}</span>`).join('')}
+            </div>`;
         }
 
         async function actionSys(t) {
@@ -452,6 +581,30 @@ HTML_TEMPLATE = """
             finally { showLoading(false); }
         }
 
+        async function actionDownloadGGUF() {
+            const model_id = document.getElementById('dl-model-id').value.trim();
+            const file = document.getElementById('dl-file').value.trim();
+            const dir = document.getElementById('dl-dir').value.trim();
+
+            if(!model_id || !file) {
+                alert("Please fill in both Model ID and File Name.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/gguf_download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_id, file, dir })
+                });
+                const data = await res.json();
+                if(!res.ok) throw new Error(data.msg);
+                alert(data.msg); // Show success message
+            } catch(e) {
+                alert('Download Error: ' + e.message);
+            }
+        }
+
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'flex' : 'none';
         }
@@ -491,6 +644,8 @@ HTML_TEMPLATE = """
         }
 
         async function fetchData() {
+            if (currentTab === 'gguf') return; // Do not fetch table data if in download view
+            
             showLoading(true);
             try {
                 const res = await fetch('/api/data');
@@ -514,7 +669,7 @@ HTML_TEMPLATE = """
                         badge.className = 'badge badge-idle';
                         startBtn.style.display = 'block';
                     }
-                } else {
+                } else if (currentTab === 'llama') {
                     statusContainer.style.display = 'none';
                     startBtn.style.display = 'none';
                 }
