@@ -24,40 +24,31 @@ docker:
 services:
 
   # 1. 聊天模型
-  Qwen3.5-0.8B-Q8_0:
-    model_file: "Qwen3.5-0.8B-Q8_0.gguf"
-    capabilities: ["Chat"]
+  qwen3.5-4b:
+    model_file: "Qwen3.5-4B-Q4_K_M.gguf"
+    capabilities: ["Completion"]
     host: "0.0.0.0"
-    port: 1001
+    port: 1003
     threads: 8
     extra_args: ["-c", "4096"]
-
-  Qwen2.5-0.5B-Instruct-GGUF:
-    model_file: "qwen2.5-0.5b-instruct-q4_k_m.gguf"
-    capabilities: ["Chat"]
-    host: "0.0.0.0"
-    port: 1002
-    threads: 8
-    batch-size: 4096
-    extra_args: ["-c", "4096"]
-
 
   # 2. Embedding 专用模型
-  bge-m3-Q8_0:
-    model_file: "bge-m3-Q8_0.gguf"
+  bge-m3-q4_k_m:
+    model_file: "bge-m3-q4_k_m.gguf"
     capabilities: ["Embedding"]
     host: "0.0.0.0"
     port: 8088
-    threads: 8
+    threads: 6
     # -b: 逻辑批处理大小（提升吞吐量）；-ub: 物理批处理大小（单次最大 token 上限）
-    extra_args: ["--embedding", "-b", "2048", "-ub", "2048"]
+    extra_args: ["--embedding", "-b", "2048", "-ub", "2048", "-ngl", "99"]
+
 
   # 3. 方案 A: 综合集成模型 (重排序 + 辅助向量)
-  bge-reranker-v2-m3-FP16:
-    model_file: "bge-reranker-v2-m3-FP16.gguf"
+  bge-reranker-v2-m3-Q4_K_M:
+    model_file: "bge-reranker-v2-m3-Q4_K_M.gguf"
     capabilities: ["Embedding", "Rerank"]
     host: "0.0.0.0"
     port: 8000
-    threads: 8
+    threads: 4
     # 启用多种功能的启动参数
-    extra_args: ["--embedding", "--pooling", "rank", "--reranking"]
+    extra_args: ["--embedding", "--pooling", "rank", "--reranking", "-ngl", "99"]

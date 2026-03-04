@@ -3,5 +3,5 @@
 
 dir: D:\oLLM\alone_models
 models:
-- model_id: Qwen/Qwen2.5-0.5B-Instruct-GGUF
-  file: qwen2.5-0.5b-instruct-q4_k_m.gguf
+- model_id: lmstudio-community/Qwen3.5-4B-GGUF
+  file: Qwen3.5-4B-Q4_K_M.gguf
