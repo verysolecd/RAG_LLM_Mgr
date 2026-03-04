@@ -1,3 +1,7 @@
+"""
+RAG Manager - Entry Point
+Orchestrates the Flask application, defines API routes, and maps requests to logic modules.
+"""
 import os
 import json
 import subprocess
@@ -9,7 +13,7 @@ import monitor_logic
 
 app = Flask(__name__)
 
-# --- Load Configuration ---
+# --- Configuration Management ---
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 try:
     with open(CONFIG_FILE, 'r', encoding='utf-8') as f:

@@ -1,3 +1,8 @@
+"""
+Monitor Logic Module
+Handles system process monitoring, model filesystem scanning, and direct service controls.
+This module is decoupled from the web framework for better portability.
+"""
 import psutil
 import requests
 import re
@@ -6,6 +11,7 @@ import subprocess
 import time
 
 def format_uptime(seconds):
+    """Converts a duration in seconds to a human-readable string (e.g., 2h 30m)."""
     if seconds < 60: return f"{int(seconds)}s"
     m, s = divmod(seconds, 60)
     if m < 60: return f"{int(m)}m {int(s)}s"
@@ -61,12 +67,14 @@ def get_llama_models(config):
         active_proc = next((p for p in running_instances if p['filename'].lower() == fname.lower()), None)
         
         service_type = None
+        port = None
         caps = []
         l_fname = fname.lower()
         
         for s_name, s_cfg in config.get("services", {}).items():
             if s_cfg.get("model_file", "").lower() == l_fname:
                 service_type = s_name
+                port = s_cfg.get("port")
                 caps.append(s_name.capitalize())
         
         if not caps:
@@ -90,6 +98,7 @@ def get_llama_models(config):
                 "path": active_proc['path'],
                 "size_mb": size_mb,
                 "service_type": service_type,
+                "port": port,
                 "caps": caps
             })
         else:
@@ -99,6 +108,7 @@ def get_llama_models(config):
                 "path": full_path,
                 "size_mb": size_mb,
                 "service_type": service_type,
+                "port": port,
                 "caps": caps
             })
             
@@ -132,8 +142,9 @@ def get_ollama_status(api_url):
                 "name": name,
                 "disk_size_mb": round(m.get('size', 0) / (1024 * 1024), 2),
                 "running": is_active,
-                "total_mb": active_dict[name]['total_mb'] if is_active else 0,
-                "vram_mb": active_dict[name]['vram_mb'] if is_active else 0,
+                "total_mb": round(active_dict[name]['total_mb'], 2) if is_active else 0,
+                "vram_mb": round(active_dict[name]['vram_mb'], 2) if is_active else 0,
+                "port": 11434,
                 "caps": caps
             })
         return sorted(merged, key=lambda x: (not x['running'], x['name'])), None, is_ollama_service_running()

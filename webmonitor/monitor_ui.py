@@ -1,3 +1,8 @@
+"""
+Monitor UI Template
+Contains the HTML5, CSS3 (macOS Glassmorphism Style), and Vanilla JavaScript
+that powers the front-end dashboard.
+"""
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="zh">
@@ -285,6 +290,32 @@ HTML_TEMPLATE = """
             font-weight: 600;
         }
         @media (prefers-color-scheme: dark) { .loading-screen { background: rgba(0,0,0,0.6); } }
+
+        /* --- New Status Bar / Footer --- */
+        .footer {
+            height: 120px;
+            background: var(--sidebar-glass);
+            border-top: 1px solid var(--border-glass);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 32px;
+            font-size: 14px;
+            color: var(--text-dim);
+            font-weight: 500;
+            gap: 12px;
+            z-index: 101;
+        }
+        .status-item { display: flex; align-items: center; gap: 6px; }
+        .status-value { color: var(--apple-blue); font-weight: 700; font-family: "SF Mono", monospace; }
+        .copy-toast {
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            background: var(--apple-blue); color: white; padding: 6px 16px; border-radius: 20px;
+            font-size: 12px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+        }
+        .copy-toast.show { opacity: 1; }
+        .model-name { cursor: pointer; transition: opacity 0.2s; }
+        .model-name:hover { opacity: 0.7; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -340,6 +371,13 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
+        <!-- Footer / Status Bar -->
+        <div class="footer">
+            <div class="status-value" id="stat-name" style="font-size: 24px; margin-bottom: 5px;">None</div>
+            <div class="status-value" id="stat-url" style="font-size: 18px; opacity: 0.8;">-</div>
+        </div>
+
+        <div class="copy-toast" id="copy-toast">Copied to Clipboard!</div>
         <div class="loading-screen" id="loading">Updating System Status...</div>
     </div>
 
@@ -428,6 +466,30 @@ HTML_TEMPLATE = """
             }).join('');
         }
 
+        function copyEndpoint(fullName, port) {
+            // Remove file extension (e.g., .gguf)
+            const name = fullName.replace(/\.[^/.]+$/, "");
+            const url = `host.docker.internal:${port || '?'}`;
+            const textToCopy = `${name} ${url}`;
+            
+            // Clipboard copy
+            const el = document.createElement('textarea');
+            el.value = textToCopy;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            // Update UI
+            document.getElementById('stat-name').innerText = name;
+            document.getElementById('stat-url').innerText = url;
+
+            // Show Toast
+            const toast = document.getElementById('copy-toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
         async function fetchData() {
             showLoading(true);
             try {
@@ -474,15 +536,15 @@ HTML_TEMPLATE = """
                                 <td>${action}</td>
                                 <td>
                                     <div class="model-cell">
-                                        <span class="model-name">${m.name}</span>
+                                        <span class="model-name" onclick="copyEndpoint('${m.name}', '${m.port || ''}')">${m.name}</span>
                                         <span class="model-path">/alone_models/${m.name}</span>
                                     </div>
                                 </td>
                                 <td>${renderTags(m.caps)}</td>
                                 <td><span class="badge ${m.running ? 'badge-running' : 'badge-idle'}">${m.running ? 'Active ('+m.pid+')' : 'Idle'}</span></td>
-                                <td class="metric-text">${m.running ? m.ram_mb : 0} MB</td>
-                                <td class="metric-text" style="color:var(--apple-orange)">${m.running ? m.vram_mb : 0} MB</td>
-                                <td class="metric-text">${m.running ? m.uptime : m.size_mb + ' MB'}</td>
+                                <td class="metric-text">${(m.running ? m.ram_mb : 0).toFixed(2)} MB</td>
+                                <td class="metric-text" style="color:var(--apple-orange)">${(m.running ? m.vram_mb : 0).toFixed(2)} MB</td>
+                                <td class="metric-text">${m.running ? m.uptime : m.size_mb.toFixed(2) + ' MB'}</td>
                             </tr>
                         `;
                     }
@@ -506,15 +568,15 @@ HTML_TEMPLATE = """
                                     <td>${action}</td>
                                     <td>
                                         <div class="model-cell">
-                                            <span class="model-name">${m.name}</span>
+                                            <span class="model-name" onclick="copyEndpoint('${m.name}', '${m.port}')">${m.name}</span>
                                             <span class="model-path">Ollama Repository</span>
                                         </div>
                                     </td>
                                     <td>${renderTags(m.caps)}</td>
                                     <td><span class="badge ${m.running ? 'badge-running' : 'badge-idle'}">${m.running ? 'In VRAM' : 'On Disk'}</span></td>
-                                    <td class="metric-text">${m.running ? (m.total_mb - m.vram_mb).toFixed(1) : 0} MB</td>
-                                    <td class="metric-text" style="color:var(--apple-orange)">${m.running ? m.vram_mb.toFixed(1) : 0} MB</td>
-                                    <td class="metric-text">${m.disk_size_mb} MB</td>
+                                    <td class="metric-text">${(m.running ? (m.total_mb - m.vram_mb) : 0).toFixed(2)} MB</td>
+                                    <td class="metric-text" style="color:var(--apple-orange)">${(m.running ? m.vram_mb : 0).toFixed(2)} MB</td>
+                                    <td class="metric-text">${m.disk_size_mb.toFixed(2)} MB</td>
                                 </tr>
                             `;
                         }
