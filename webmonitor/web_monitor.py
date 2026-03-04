@@ -27,12 +27,21 @@ def index():
 @app.route('/api/data')
 def api_data():
     llama_models = monitor_logic.get_llama_models(config)
-    ollama_all, ollama_err = monitor_logic.get_ollama_status(OLLAMA_API)
+    ollama_all, ollama_err, ollama_live = monitor_logic.get_ollama_status(OLLAMA_API)
     return jsonify({
         "llama_models": llama_models,
         "ollama_all": ollama_all,
-        "ollama_error": ollama_err
+        "ollama_error": ollama_err,
+        "ollama_live": ollama_live
     })
+
+@app.route('/api/ollama_service_start', methods=['POST'])
+def ollama_service_start():
+    try:
+        monitor_logic.start_ollama_service()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"status": "error", "msg": str(e)}), 500
 
 @app.route('/api/sys_<target>', methods=['POST'])
 def sys_control(target):

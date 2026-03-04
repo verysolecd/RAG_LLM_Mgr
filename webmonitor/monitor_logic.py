@@ -12,6 +12,20 @@ def format_uptime(seconds):
     h, m = divmod(m, 60)
     return f"{int(h)}h {int(m)}m"
 
+def is_ollama_service_running():
+    for proc in psutil.process_iter(['name']):
+        try:
+            if proc.info['name'] and ('ollama.exe' in proc.info['name'].lower() or 'ollama app.exe' in proc.info['name'].lower()):
+                return True
+        except: pass
+    return False
+
+def start_ollama_service():
+    # Launches Ollama serve in the background
+    DETACHED_PROCESS = 0x00000008
+    subprocess.Popen(["ollama", "serve"], creationflags=DETACHED_PROCESS)
+    return True
+
 def get_llama_models(config):
     # 1. Scan disk for available .gguf models
     model_dir = config.get("paths", {}).get("model_dir", "")
@@ -122,9 +136,9 @@ def get_ollama_status(api_url):
                 "vram_mb": active_dict[name]['vram_mb'] if is_active else 0,
                 "caps": caps
             })
-        return sorted(merged, key=lambda x: (not x['running'], x['name'])), None
+        return sorted(merged, key=lambda x: (not x['running'], x['name'])), None, is_ollama_service_running()
     except Exception as e:
-        return [], f"Cannot connect to Ollama: {str(e)}"
+        return [], f"Cannot connect to Ollama: {str(e)}", is_ollama_service_running()
 
 def run_llama_start(config, target):
     service_cfg = config.get("services", {}).get(target)

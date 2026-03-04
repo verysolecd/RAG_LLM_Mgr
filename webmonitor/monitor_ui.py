@@ -312,6 +312,10 @@ HTML_TEMPLATE = """
     <div class="main-container">
         <div class="toolbar">
             <div class="toolbar-title" id="page-title">LLaMA.cpp Instances</div>
+            <div id="service-status-container" style="display:none; align-items:center; gap:8px;">
+                <span id="ollama-service-badge" class="badge">Checking...</span>
+            </div>
+            <button id="ollama-start-btn" class="refresh-btn" style="display:none; background:var(--apple-green); color:white; border:none;" onclick="actionOllamaService('start')">▶ Start Service</button>
             <button class="refresh-btn" onclick="fetchData()">⟳ Refresh</button>
         </div>
 
@@ -398,6 +402,18 @@ HTML_TEMPLATE = """
             finally { showLoading(false); }
         }
 
+        async function actionOllamaService(act) {
+            showLoading(true);
+            try {
+                const res = await fetch(`/api/ollama_service_${act}`, { method:'POST' });
+                const data = await res.json();
+                if(!res.ok) throw new Error(data.msg);
+                // Give it a moment to start
+                setTimeout(fetchData, 2000);
+            } catch(e) { alert('Service Error: ' + e.message); }
+            finally { showLoading(false); }
+        }
+
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'flex' : 'none';
         }
@@ -420,6 +436,27 @@ HTML_TEMPLATE = """
                 const tbody = document.getElementById('table-body');
                 let html = '';
                 
+                // Update Ollama Service Status UI
+                const statusContainer = document.getElementById('service-status-container');
+                const startBtn = document.getElementById('ollama-start-btn');
+                const badge = document.getElementById('ollama-service-badge');
+
+                if (currentTab === 'ollama') {
+                    statusContainer.style.display = 'flex';
+                    if (data.ollama_live) {
+                        badge.innerText = 'SERVICE: SERVING';
+                        badge.className = 'badge badge-running';
+                        startBtn.style.display = 'none';
+                    } else {
+                        badge.innerText = 'SERVICE: STOPPED';
+                        badge.className = 'badge badge-idle';
+                        startBtn.style.display = 'block';
+                    }
+                } else {
+                    statusContainer.style.display = 'none';
+                    startBtn.style.display = 'none';
+                }
+
                 if(currentTab === 'llama') {
                     let lastActive = null;
                     for(let m of data.llama_models) {
