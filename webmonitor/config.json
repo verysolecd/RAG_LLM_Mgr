@@ -1,0 +1,29 @@
+{
+    "paths": {
+        "model_dir": "D:\\oLLM\\alone_models",
+        "llama_server": "llama-server.exe"
+    },
+    "services": {
+        "embedding": {
+            "model_file": "bge-m3-Q8_0.gguf",
+            "host": "0.0.0.0",
+            "port": 8088,
+            "threads": 8,
+            "extra_args": ["--embedding"]
+        },
+        "rerank": {
+            "model_file": "bge-reranker-v2-m3-FP16.gguf",
+            "host": "0.0.0.0",
+            "port": 8000,
+            "threads": 8,
+            "extra_args": ["--embedding", "--pooling", "rank", "--reranking"]
+        }
+    },
+    "docker": {
+        "ragflow_dir": "D:\\Dockers_data\\Docker_RAGFLOW\\ragflow\\docker",
+        "nginx_pm_dir": "D:\\Dockers_data\\Docker_NginxPM"
+    },
+    "ollama": {
+        "api_url": "http://127.0.0.1:11434"
+    }
+}

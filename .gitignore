@@ -1,0 +1,4 @@
+.venv
+alone_models/
+llamacpp
+ollama
