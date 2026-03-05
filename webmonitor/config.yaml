@@ -29,7 +29,7 @@ services:
     capabilities: ["Completion"]
     port: 1003
     threads: 8
-    extra_args: ["-c", "10240"]
+    extra_args: ["-c", "20480", "-n", "1024", "-ngl", "22"]
 
 
   qwen3.5-9b:
