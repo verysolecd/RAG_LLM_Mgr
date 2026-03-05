@@ -27,7 +27,7 @@ services:
   qwen2.5-7b:
     model_file: "openbuddy-qwen2.5llamaify-7b-v23.1-200k-q4_k_m.gguf"
     capabilities: ["Completion"]
-    port: 1003
+    port: 1001
     threads: 8
     extra_args: ["-c", "20480", "-n", "1024", "-ngl", "22"]
 
@@ -38,6 +38,13 @@ services:
     port: 1004
     threads: 8
     extra_args: ["-c", "10240"]
+    
+  qwen3.5-4b:  
+    model_file: "Qwen3.5-4B-Q4_K_M.gguf"
+    capabilities: ["Completion"]
+    port: 1003
+    threads: 8
+    extra_args: ["-c", "32678", "-n", "1024", "-ngl", "30"]
 
   # 2. Embedding 专用模型
   bge-m3-q4_k_m:
