@@ -3,5 +3,5 @@
 
 dir: D:\oLLM\alone_models
 models:
-- model_id: lmstudio-community/Qwen3.5-4B-GGUF
-  file: Qwen3.5-4B-Q4_K_M.gguf
+- model_id: OpenBuddy/openbuddy-qwen2.5llamaify-7b-v23.1-200k-Q4_K_M-GGUF
+  file: openbuddy-qwen2.5llamaify-7b-v23.1-200k-q4_k_m.gguf

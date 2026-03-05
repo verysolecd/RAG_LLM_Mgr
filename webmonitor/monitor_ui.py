@@ -386,6 +386,8 @@ HTML_TEMPLATE = """
         .copy-toast.show { opacity: 1; }
         .model-name { cursor: pointer; transition: opacity 0.2s; }
         .model-name:hover { opacity: 0.7; text-decoration: underline; }
+        .api-link { color: var(--apple-blue); text-decoration: underline; font-family: "SF Mono", monospace; font-size: 13px; }
+        .api-link:hover { text-decoration: none; opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -433,6 +435,7 @@ HTML_TEMPLATE = """
                             <tr id="table-header">
                                 <th style="width:80px">Action</th>
                                 <th style="width:35%">Model Resource</th>
+                                <th>API Link</th>
                                 <th>Capability</th>
                                 <th>Status</th>
                                 <th>System RAM</th>
@@ -619,11 +622,9 @@ HTML_TEMPLATE = """
             }).join('');
         }
 
-        function copyEndpoint(fullName, port) {
-            // Remove file extension (e.g., .gguf)
-            const name = fullName.replace(/\.[^/.]+$/, "");
-            const url = `host.docker.internal:${port || '?'}`;
-            const textToCopy = `${name}    ${url}`;
+        function copyEndpoint(alias, port) {
+            const url = `http://host.docker.internal:${port || '?'}`;
+            const textToCopy = `${alias}\t${url}`;
             
             // Clipboard copy
             const el = document.createElement('textarea');
@@ -634,7 +635,7 @@ HTML_TEMPLATE = """
             document.body.removeChild(el);
 
             // Update UI
-            document.getElementById('stat-name').innerText = name;
+            document.getElementById('stat-name').innerText = alias;
             document.getElementById('stat-url').innerText = url;
 
             // Show Toast
@@ -678,7 +679,7 @@ HTML_TEMPLATE = """
                     let lastActive = null;
                     for(let m of data.llama_models) {
                         if(lastActive === true && m.running === false) {
-                            html += `<tr class="separator-row"><td colspan="7">Available Offline Models</td></tr>`;
+                            html += `<tr class="separator-row"><td colspan="8">Available Offline Models</td></tr>`;
                         }
                         lastActive = m.running;
                         
@@ -686,15 +687,17 @@ HTML_TEMPLATE = """
                             ? `<button class="btn-action btn-action-stop" onclick="actionLlama('stop', ${m.pid})">Stop</button>`
                             : (m.service_type ? `<button class="btn-action btn-action-start" onclick="actionLlama('start', '${m.service_type}')">Run</button>` : '-');
 
+                        let apiLink = m.port ? `<a href="http://127.0.0.1:${m.port}" target="_blank" class="api-link">127.0.0.1:${m.port}</a>` : '-';
                         html += `
                             <tr>
                                 <td>${action}</td>
                                 <td>
                                     <div class="model-cell">
-                                        <span class="model-name" onclick="copyEndpoint('${m.name}', '${m.port || ''}')">${m.name}</span>
+                                        <span class="model-name" onclick="copyEndpoint('${m.alias || m.name}', '${m.port || ''}')">${m.alias || m.name}</span>
                                         <span class="model-path">/alone_models/${m.name}</span>
                                     </div>
                                 </td>
+                                <td>${apiLink}</td>
                                 <td>${renderTags(m.caps)}</td>
                                 <td><span class="badge ${m.running ? 'badge-running' : 'badge-idle'}">${m.running ? 'Active ('+m.pid+')' : 'Idle'}</span></td>
                                 <td class="metric-text">${(m.running ? m.ram_mb : 0).toFixed(2)} MB</td>
@@ -706,11 +709,11 @@ HTML_TEMPLATE = """
                 } else {
                     let lastActive = null;
                     if(data.ollama_error) {
-                        html = `<tr><td colspan="7" style="text-align:center; padding:20px; color:red">${data.ollama_error}</td></tr>`;
+                        html = `<tr><td colspan="8" style="text-align:center; padding:20px; color:red">${data.ollama_error}</td></tr>`;
                     } else {
                         for(let m of data.ollama_all) {
                             if(lastActive === true && m.running === false) {
-                                html += `<tr class="separator-row"><td colspan="7">Cached Library Models</td></tr>`;
+                                html += `<tr class="separator-row"><td colspan="8">Cached Library Models</td></tr>`;
                             }
                             lastActive = m.running;
                             
@@ -718,15 +721,17 @@ HTML_TEMPLATE = """
                                 ? `<button class="btn-action btn-action-stop" onclick="actionOllama('unload', '${m.name}')">Eject</button>`
                                 : `<button class="btn-action btn-action-start" onclick="actionOllama('load', '${m.name}')">Load</button>`;
 
+                            let apiLink = `<a href="http://127.0.0.1:11434" target="_blank" class="api-link">127.0.0.1:11434</a>`;
                             html += `
                                 <tr>
                                     <td>${action}</td>
                                     <td>
                                         <div class="model-cell">
-                                            <span class="model-name" onclick="copyEndpoint('${m.name}', '${m.port}')">${m.name}</span>
+                                            <span class="model-name" onclick="copyEndpoint('${m.alias || m.name}', '11434')">${m.alias || m.name}</span>
                                             <span class="model-path">Ollama Repository</span>
                                         </div>
                                     </td>
+                                    <td>${apiLink}</td>
                                     <td>${renderTags(m.caps)}</td>
                                     <td><span class="badge ${m.running ? 'badge-running' : 'badge-idle'}">${m.running ? 'In VRAM' : 'On Disk'}</span></td>
                                     <td class="metric-text">${(m.running ? (m.total_mb - m.vram_mb) : 0).toFixed(2)} MB</td>

@@ -64,6 +64,7 @@ def get_llama_models(config):
         service_type = None
         port = None
         caps = []
+        alias = None
         l_fname = fname.lower().strip()
         
         for s_name, s_cfg in config.get("services", {}).items():
@@ -73,7 +74,8 @@ def get_llama_models(config):
             if cfg_file == l_fname:
                 service_type = s_name
                 port = s_cfg.get("port")
-                print(f"  -> SUCCESS: Match found for {s_name}")
+                alias = s_cfg.get("alias") or s_name
+                print(f"  -> SUCCESS: Match found for {s_name}, alias={alias}")
                 # Use explicit capabilities list or fallback to service name
                 if "capabilities" in s_cfg:
                     caps.extend(s_cfg["capabilities"])
@@ -87,6 +89,10 @@ def get_llama_models(config):
         
         # Unique capabilities
         caps = list(dict.fromkeys(caps))
+        
+        # Fallback alias: filename without extension
+        if not alias:
+            alias = fname.rsplit('.', 1)[0]
 
         full_path = os.path.join(model_dir, fname)
         size_mb = 0
@@ -96,6 +102,7 @@ def get_llama_models(config):
         if active_proc:
             merged.append({
                 "name": fname,
+                "alias": alias,
                 "running": True,
                 "pid": active_proc['pid'],
                 "ram_mb": active_proc['ram_mb'],
@@ -110,6 +117,7 @@ def get_llama_models(config):
         else:
             merged.append({
                 "name": fname,
+                "alias": alias,
                 "running": False,
                 "path": full_path,
                 "size_mb": size_mb,
@@ -123,9 +131,12 @@ def get_llama_models(config):
 def format_uptime(seconds):
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
     if hours > 0:
-        return f"{hours}h {minutes}m"
-    return f"{minutes}m"
+        return f"{hours}h {minutes}m {secs}s"
+    if minutes > 0:
+        return f"{minutes}m {secs}s"
+    return f"{secs}s"
 
 def get_ollama_status(api_url):
     import requests
@@ -205,9 +216,11 @@ def run_llama_start(config, service_id):
     model_path = os.path.join(model_dir, s_cfg.get("model_file"))
     llama_bin = config.get("paths", {}).get("llama_server", "llama-server.exe")
     
+    alias = s_cfg.get("alias") or service_id
     cmd = [
         llama_bin,
         "-m", model_path,
+        "--alias", alias,
         "--host", s_cfg.get("host", "0.0.0.0"),
         "--port", str(s_cfg.get("port", 8080)),
         "-t", str(s_cfg.get("threads", 4))

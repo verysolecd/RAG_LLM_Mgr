@@ -2,3 +2,4 @@
 alone_models/
 llamacpp
 ollama
+__pycache__/
