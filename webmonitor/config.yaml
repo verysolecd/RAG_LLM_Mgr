@@ -24,28 +24,101 @@ docker:
 services:
 
   # 1. 聊天模型
-  qwen2.5-7b:
-    model_file: "openbuddy-qwen2.5llamaify-7b-v23.1-200k-q4_k_m.gguf"
+  MISTral:
+    model_file: "Mistral-7B-Instruct-v0.3.Q5_K_M.gguf"
     capabilities: ["Completion"]
-    port: 1001
+    port: 1002
     threads: 8
-    extra_args: ["-c", "20480", "-n", "1024", "-ngl", "22"]
+    extra_args: ["-ngl", "99"]  
+
+  Qwen3-4B-Uncensored:
+    model_file: "Huihui-Qwen3-4B-abliterated-v2.i1-Q5_K_M.gguf"
+    capabilities: ["Completion"]
+    port: 1002
+    threads: 8
+    extra_args: ["-c", "32678", "-n", "10240","-ngl", "99", "--reasoning-budget", "0"]
+    
+  qwen3.5-4b-uncensored:  
+    model_file: "Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf"
+    capabilities: ["Completion"]
+    port: 1002
+    threads: 8
+    extra_args: ["-c", "32678", "-b", "10240", "-n", "10240", "-ngl", "99"]
+  
+  Qwen3.5-9B-Uncensored:
+    model_file: "Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf"
+    capabilities: ["Completion"]
+    port: 1002
+    threads: 8
+    extra_args: ["-c", "32678", "-n", "10240", "-ngl", "99", "--reasoning-budget", "0"]
+  
+
+  copaw-FLASH:
+    model_file: "CoPaw-Flash-2B-Q4_K_M.gguf"
+    capabilities: ["Completion"]
+    port: 1002
+    threads: 8
+    extra_args: ["-c", "262144", "-n", "4096", "-ngl", "99"]
+ 
+  qwen2.5-7b:  
+#openbuddy-qwen2.5llamaify-7b-v23.1-200k-q4_k_m.gguf
+    model_file: "qwen2.5-7b-instruct-q4_k_m.gguf"   
+    capabilities: ["Completion"]
+    port: 1002
+    threads: 8
+    extra_args: ["-c", "40960", "-ngl", "99", "--flash-attn", "on", "--repeat-penalty", "1.1"]
+
+  qwen3.5-0.8b:
+    model_file: "Qwen.Qwen3.5-0.8B.Q4_K_M.gguf"
+    capabilities: ["Completion"]
+    port: 1002
+    threads: 8
+    extra_args: ["-c", "30000", "-b", "2048", "-n", "8192", "-ngl", "99", "--cors" ]
 
 
   qwen3.5-9b:
     model_file: "Qwen3.5-9B-Q4_K_M.gguf"
     capabilities: ["Completion"]
-    port: 1004
+    port: 1002
     threads: 8
-    extra_args: ["-c", "10240"]
-    
-  qwen3.5-4b:  
-    model_file: "Qwen3.5-4B-Q4_K_M.gguf"
-    capabilities: ["Completion"]
-    port: 1003
-    threads: 8
-    extra_args: ["-c", "32678", "-n", "1024", "-ngl", "30"]
-
+    extra_args: ["-c", "32768", "-b", "2048", "-n", "8192", "-ngl", "35", "--flash-attn", "on", "--rope-freq-base", "1000000", "--rope-freq-scale", "0.5", "--repeat-penalty", "1.1"]
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
   # 2. Embedding 专用模型
   bge-m3-q4_k_m:
     model_file: "bge-m3-q4_k_m.gguf"
